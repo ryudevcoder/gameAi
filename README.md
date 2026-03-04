@@ -1,29 +1,24 @@
-# 🏎️ Touge Drift Master (Fujiwara Descent)
+# 🍄 Smurf Defense v1.0
 
-Um jogo de drift no estilo **Initial D** desenvolvido com **Phaser.js**. 
+Defenda a Vila Smurf das investidas de Gargamel!
 
 ## 🕹️ Como Jogar
-- **Setas / WASD**: Acelerar, frear e virar.
-- **Espaço**: Freio de mão (Handbrake). Inicie o drift com velocidade e pressione para deslizar agressivamente!
-- **Objetivo**: Complete a descida da montanha no menor tempo possível.
+1. Abra o `index.html` no seu navegador.
+2. Selecione um Smurf no menu inferior:
+   - **Robusto (50🍒)**: Atira pedras, balanceado.
+   - **Gênio (75🍒)**: Lança poções que deixam os inimigos lentos.
+   - **Smurfette (120🍒)**: Longo alcance e alto dano (Sniper).
+3. Clique em qualquer lugar do mapa para posicionar a torre.
+4. Ganhe **Frutos de Smurf** derrotando inimigos.
+5. Impeça que o **Gargamel** (Boss) chegue à vila a cada 10 ondas!
 
-## 🛠️ Tecnologias Utilizadas
-- **Phaser.js** (Game Engine 2D)
-- **HTML5 Canvas**
-- **Vanilla CSS** (Interface e HUD)
+## 🛠️ Personalização (Assets)
+O jogo utiliza formas coloridas como placeholders. Para usar imagens reais:
+1. Adicione seus arquivos `.png` na pasta `assets/`.
+2. No arquivo `src/game.js`, use `this.load.image()` dentro da função `preload`.
+3. Substitua `this.add.circle()` por `this.add.sprite()`.
 
-## 📁 Estrutura do Projeto
-- `/assets`: Sprites e sons.
-- `/src`: Lógica principal do jogo (`game.js`).
-- `index.html`: Ponto de entrada.
-
-## 🚀 Como fazer o Push para GitHub Pages
-1. Abra o **GitHub Desktop**.
-2. Adicione esta pasta como um repositório local.
-3. Publique o repositório no seu perfil do GitHub.
-4. No GitHub, vá em **Settings > Pages**.
-5. Em **Build and deployment**, selecione a branch `main` e a pasta `/ (root)`.
-6. Clique em **Save**. Em alguns minutos, seu jogo estará online em `https://seu-usuario.github.io/nome-do-repositorio`.
-
----
-Desenvolvido com 🏁 por Antigravity (Google Deepmind) para o projeto Touge Drift.
+## 🚀 Publicação
+1. Faça o Commit de todos os arquivos usando o **GitHub Desktop**.
+2. No GitHub, vá em **Settings > Pages**.
+3. Selecione o branch `main` e salve para ver seu jogo online!

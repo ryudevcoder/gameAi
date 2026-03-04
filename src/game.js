@@ -1,15 +1,12 @@
 const config = {
     type: Phaser.AUTO,
-    width: 800,
+    width: 900,
     height: 600,
     parent: 'game-container',
-    backgroundColor: '#1a2e1a', /* Dark mountain green */
+    backgroundColor: '#3d994d',
     physics: {
         default: 'arcade',
-        arcade: {
-            gravity: { y: 0 },
-            debug: false
-        }
+        arcade: { debug: false }
     },
     scene: {
         preload: preload,
@@ -20,182 +17,217 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-let car;
-let cursors;
-let spaceKey;
-let speedometerText;
-let timerText;
-let startTime;
-let particles;
-let trails;
+let enemies;
+let towers;
+let bullets;
+let path;
+let graphics;
+let currency = 100;
+let lives = 20;
+let wave = 1;
+let selectedTowerType = null;
+let waveActive = false;
+let nextEnemyTime = 0;
+let enemiesRemainingInWave = 0;
 
-let speedLines;
+const TOWER_DATA = {
+    robust: { cost: 50, color: 0x3498db, range: 150, fireRate: 800, damage: 10, bulletSpeed: 400 },
+    genius: { cost: 75, color: 0x9b59b6, range: 120, fireRate: 1200, damage: 2, bulletSpeed: 300, slow: 0.5 },
+    ette: { cost: 120, color: 0xf1c40f, range: 250, fireRate: 2000, damage: 30, bulletSpeed: 600 }
+};
 
 function preload() {
-    // Tenta carregar o sprite do carro gerado
-    this.load.image('car_sprite', 'assets/car.png');
-
-    // Smoke particle placeholder (using graphics for efficiency)
-    const graphics = this.add.graphics();
-
-    // Fallback: Se o car.png falhar, o Phaser usará a chave 'car_sprite'. 
-    // Criamos uma textura de fallback com o mesmo nome caso a imagem não carregue.
-    graphics.fillStyle(0xffffff, 1);
-    graphics.fillRect(0, 0, 40, 20);
-    graphics.fillStyle(0x000000, 1);
-    graphics.fillRect(0, 0, 40, 5);
-    graphics.fillRect(0, 15, 40, 5);
-    graphics.generateTexture('car_fallback', 40, 20);
-
-    graphics.clear();
-    graphics.fillStyle(0xaaaaaa, 0.5);
-    graphics.fillCircle(5, 5, 5);
-    graphics.generateTexture('smoke', 10, 10);
-
-    // Speed lines graphics
-    const lines = this.add.graphics();
-    lines.lineStyle(2, 0xffffff, 0.2);
-    for (let i = 0; i < 20; i++) {
-        lines.lineBetween(Math.random() * 800, 0, Math.random() * 800, 600);
-    }
-    lines.generateTexture('speedline', 800, 600);
-    graphics.destroy();
-    lines.destroy();
+    // We use graphics for placeholders as requested
 }
 
 function create() {
-    // UI elements from HTML (speedometer and timer sync)
-    speedometerText = document.getElementById('speedometer');
-    timerText = document.getElementById('timer');
-    startTime = this.time.now;
+    // Define Path (Z-shape)
+    path = new Phaser.Curves.Path(0, 150);
+    path.lineTo(700, 150);
+    path.lineTo(700, 450);
+    path.lineTo(0, 450);
 
-    // Road track graphics
-    const road = this.add.graphics();
-    road.lineStyle(80, 0x1a1a1a); // Highway width
-    road.beginPath();
-    road.moveTo(-100, 300);
-    road.lineTo(900, 300); // Simple straight for testing, modify logic as needed
-    road.strokePath();
+    // Draw Path
+    graphics = this.add.graphics();
+    graphics.lineStyle(40, 0x8b4513, 0.5);
+    path.draw(graphics);
 
-    road.lineStyle(2, 0xffffff, 0.4);
-    road.lineBetween(-100, 260, 900, 260); // Top lane line
-    road.lineBetween(-100, 340, 900, 340); // Bottom lane line
+    enemies = this.physics.add.group();
+    towers = this.add.group();
+    bullets = this.physics.add.group();
 
-    // Speed Lines Effect
-    speedLines = this.add.sprite(400, 300, 'speedline').setOrigin(0.5).setAlpha(0);
+    // UI Buttons
+    document.getElementById('btn-robust').onclick = () => selectTower('robust');
+    document.getElementById('btn-genius').onclick = () => selectTower('genius');
+    document.getElementById('btn-ette').onclick = () => selectTower('ette');
 
-    // Car setup: Verifica se a imagem carregou, senão usa fallback
-    const carKey = this.textures.exists('car_sprite') ? 'car_sprite' : 'car_fallback';
-    car = this.physics.add.sprite(150, 300, carKey);
-
-    if (carKey === 'car_sprite') {
-        car.setScale(0.15);
-    } else {
-        car.setScale(1); // Fallback já está no tamanho certo
-    }
-
-    car.setOrigin(0.5, 0.5);
-    car.setDrag(100);
-    car.setMaxVelocity(350);
-    car.setAngularDrag(1500);
-
-    // Particles (Smoke)
-    particles = this.add.particles(0, 0, 'smoke', {
-        speed: { min: 20, max: 80 },
-        scale: { start: 1, end: 0 },
-        alpha: { start: 0.5, end: 0 },
-        lifespan: 500,
-        blendMode: 'NORMAL',
-        frequency: -1 // Manual emit during drift
+    this.input.on('pointerdown', (pointer) => {
+        if (selectedTowerType && currency >= TOWER_DATA[selectedTowerType].cost) {
+            placeTower(this, pointer.x, pointer.y);
+        }
     });
 
-    // Inputs
-    cursors = this.input.keyboard.createCursorKeys();
-    // Support WASD too
-    this.input.keyboard.addKeys({
-        up: Phaser.Input.Keyboard.KeyCodes.W,
-        down: Phaser.Input.Keyboard.KeyCodes.S,
-        left: Phaser.Input.Keyboard.KeyCodes.A,
-        right: Phaser.Input.Keyboard.KeyCodes.D
+    // Start Wave Timer or trigger manually
+    this.time.addEvent({
+        delay: 3000,
+        callback: startNewWave,
+        callbackScope: this,
+        loop: false
     });
 
-    spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    // Bullet vs Enemy Collision
+    this.physics.add.overlap(bullets, enemies, (bullet, enemy) => {
+        enemy.health -= bullet.damage;
+        if (bullet.slow) {
+            enemy.speedModifier = bullet.slow;
+            this.time.delayedCall(1000, () => { if (enemy.active) enemy.speedModifier = 1; });
+        }
+        bullet.destroy();
 
-    // Initial Physics Properties
-    car.speed = 0;
-    car.accel = 180;
-    car.steering = 0.15;
-    car.driftFactor = 0.95; // 1 = no drift, lower = more drift
+        if (enemy.health <= 0) {
+            enemy.destroy();
+            updateCurrency(10);
+        }
+    });
+
+    updateUI();
 }
 
-function update(time, delta) {
-    if (!car || !car.body) return; // Segurança caso o carro não tenha sido criado
-
-    const isHandbrake = spaceKey.isDown;
-    const isAccelerating = cursors.up.isDown || this.input.keyboard.addKey('W').isDown;
-    const isBraking = cursors.down.isDown || this.input.keyboard.addKey('S').isDown;
-    const turnLeft = cursors.left.isDown || this.input.keyboard.addKey('A').isDown;
-    const turnRight = cursors.right.isDown || this.input.keyboard.addKey('D').isDown;
-
-    // Definição da velocidade para uso global na função
-    const currentDisplaySpeed = Math.floor(Math.abs(car.speed || 0));
-
-    // 1. Steering
-    if (turnLeft) {
-        car.setAngularVelocity(-180);
-    } else if (turnRight) {
-        car.setAngularVelocity(180);
-    } else {
-        car.setAngularVelocity(0);
+function update(time) {
+    if (waveActive && enemiesRemainingInWave > 0 && time > nextEnemyTime) {
+        spawnEnemy(this);
+        enemiesRemainingInWave--;
+        nextEnemyTime = time + 1500 / (1 + (wave * 0.1));
     }
 
-    // 2. Acceleration / Deceleration
-    if (isAccelerating) {
-        car.speed += car.accel * (delta / 1000);
-    } else if (isBraking) {
-        car.speed -= car.accel * (delta / 500);
-    } else {
-        car.speed *= 0.99; // Rolling friction
+    if (waveActive && enemies.countActive() === 0 && enemiesRemainingInWave === 0) {
+        waveActive = false;
+        wave++;
+        setTimeout(startNewWave, 4000);
+        updateUI();
     }
 
-    // Handbrake: momentum sliding
-    let currentDriftFactor = car.driftFactor;
-    if (isHandbrake) {
-        car.speed *= 0.98;
-        currentDriftFactor = 0.7;
-    }
-
-    car.speed = Phaser.Math.Clamp(car.speed, -50, car.setMaxVelocity().maxVelocity.x);
-
-    // 3. Drift Physics
-    const headingX = Math.cos(car.rotation) * car.speed;
-    const headingY = Math.sin(car.rotation) * car.speed;
-
-    car.body.velocity.x = car.body.velocity.x * currentDriftFactor + headingX * (1 - currentDriftFactor);
-    car.body.velocity.y = car.body.velocity.y * currentDriftFactor + headingY * (1 - currentDriftFactor);
-
-    // 5. Visual Effects (Smoke & Speed Lines)
-    const driftIntensity = Math.abs(car.body.velocity.angle() - car.rotation);
-    if ((isHandbrake && car.speed > 50) || (driftIntensity > 0.2 && car.speed > 100)) {
-        particles.emitParticleAt(car.x, car.y);
-    }
-
-    // Speed Lines Alpha
-    if (currentDisplaySpeed > 200) {
-        if (speedLines) {
-            speedLines.setAlpha((currentDisplaySpeed - 200) / 150);
-            speedLines.x = 400 + Math.random() * 5;
+    // Towers AI
+    towers.getChildren().forEach(tower => {
+        const target = getClosestEnemy(tower);
+        if (target && time > tower.nextShot) {
+            shoot(this, tower, target);
+            tower.nextShot = time + tower.fireRate;
         }
-    } else if (speedLines) {
-        speedLines.setAlpha(0);
-    }
+    });
 
-    // 6. UI Updates
-    if (speedometerText) speedometerText.innerText = `${currentDisplaySpeed} KM/H`;
+    // Enemy movement
+    enemies.getChildren().forEach(enemy => {
+        enemy.t += (0.0005 * enemy.speed * enemy.speedModifier);
+        const pos = path.getPoint(enemy.t);
+        if (pos) {
+            enemy.setPosition(pos.x, pos.y);
+        }
+        if (enemy.t >= 1) {
+            lives--;
+            enemy.destroy();
+            updateUI();
+            if (lives <= 0) gameOver();
+        }
+    });
+}
 
-    const elapsed = time - startTime;
-    const minutes = Math.floor(elapsed / 60000).toString().padStart(2, '0');
-    const seconds = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
-    const ms = Math.floor((elapsed % 1000) / 10).toString().padStart(2, '0');
-    if (timerText) timerText.innerText = `${minutes}:${seconds}.${ms}`;
+function startNewWave() {
+    waveActive = true;
+    enemiesRemainingInWave = 5 + (wave * 2);
+    nextEnemyTime = 0;
+}
+
+function spawnEnemy(scene) {
+    const isBoss = wave % 10 === 0 && enemiesRemainingInWave === 1;
+    const isGato = !isBoss;
+
+    const hpBase = isBoss ? 200 : 20;
+    const health = hpBase * Math.pow(1.2, wave - 1);
+
+    const enemy = scene.add.circle(0, 0, isBoss ? 25 : 10, isBoss ? 0xff0000 : 0x000000);
+    scene.physics.add.existing(enemy);
+
+    enemy.health = health;
+    enemy.t = 0;
+    enemy.speed = isGato ? 2.5 : 1.0;
+    enemy.speedModifier = 1;
+    enemies.add(enemy);
+}
+
+function selectTower(type) {
+    selectedTowerType = type;
+    document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`btn-${type}`).classList.add('active');
+}
+
+function placeTower(scene, x, y) {
+    const data = TOWER_DATA[selectedTowerType];
+    updateCurrency(-data.cost);
+
+    const towerContainer = scene.add.container(x, y);
+    const base = scene.add.circle(0, 0, 20, data.color);
+    const rangeCircle = scene.add.circle(0, 0, data.range, 0xffffff, 0.1);
+    rangeCircle.setStrokeStyle(1, 0xffffff, 0.5);
+
+    towerContainer.add([rangeCircle, base]);
+
+    const tower = {
+        x: x,
+        y: y,
+        type: selectedTowerType,
+        range: data.range,
+        damage: data.damage,
+        fireRate: data.fireRate,
+        slow: data.slow || null,
+        bulletSpeed: data.bulletSpeed,
+        nextShot: 0
+    };
+
+    towers.add(tower);
+    selectedTowerType = null;
+    document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('active'));
+}
+
+function shoot(scene, tower, target) {
+    const bullet = scene.add.circle(tower.x, tower.y, 5, 0xffffff);
+    scene.physics.add.existing(bullet);
+
+    scene.physics.moveToObject(bullet, target, tower.bulletSpeed);
+    bullet.damage = tower.damage;
+    bullet.slow = tower.slow;
+    bullets.add(bullet);
+
+    // Auto-destroy bullet after range
+    scene.time.delayedCall(1000, () => { if (bullet.active) bullet.destroy(); });
+}
+
+function getClosestEnemy(tower) {
+    let closest = null;
+    let minDist = Infinity;
+
+    enemies.getChildren().forEach(enemy => {
+        const dist = Phaser.Math.Distance.Between(tower.x, tower.y, enemy.x, enemy.y);
+        if (dist < tower.range && dist < minDist) {
+            minDist = dist;
+            closest = enemy;
+        }
+    });
+    return closest;
+}
+
+function updateCurrency(amount) {
+    currency += amount;
+    updateUI();
+}
+
+function updateUI() {
+    document.getElementById('currency').innerText = currency;
+    document.getElementById('lives').innerText = lives;
+    document.getElementById('wave').innerText = wave;
+}
+
+function gameOver() {
+    document.getElementById('game-over').classList.remove('hidden');
+    game.scene.pause('default');
 }

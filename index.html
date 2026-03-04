@@ -4,76 +4,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Touge Drift Master - Fujiwara Descent</title>
+    <title>Smurf Defense - Vila em Perigo</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        #game-container {
-            border: 4px solid #f09;
-            /* Neon pink border for that 90s aesthetic */
-            box-shadow: 0 0 20px rgba(255, 0, 153, 0.5);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .ui-panel {
-            position: absolute;
-            pointer-events: none;
-            text-transform: uppercase;
-            font-weight: bold;
-            letter-spacing: 2px;
-            text-shadow: 2px 2px #000;
-        }
-
-        #timer {
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 24px;
-            color: #0ff;
-            /* Cyan */
-        }
-
-        #speedometer {
-            bottom: 20px;
-            right: 20px;
-            font-size: 32px;
-            color: #f00;
-            /* Red */
-        }
-
-        .instructions {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #aaa;
-        }
-    </style>
 </head>
 
 <body>
     <div id="game-container"></div>
-
-    <!-- UI Elements managed by Phaser, but defined here for visual style -->
-    <div id="timer" class="ui-panel">00:00.00</div>
-    <div id="speedometer" class="ui-panel">0 KM/H</div>
-
-    <div class="instructions">
-        SETAS/WASD: Dirigir | ESPAÇO: Freio de Mão (Drift!)
+    <div id="ui-overlay">
+        <div class="header">
+            <h1 class="game-title">Smurf Defense</h1>
+            <div class="stats-container">
+                <div class="stat-item">🍒 <span id="currency">100</span></div>
+                <div class="stat-item">💙 <span id="lives">20</span></div>
+                <div class="stat-item">🌊 Onda: <span id="wave">1</span></div>
+            </div>
+        </div>
+        <div id="tower-menu">
+            <div class="tower-btn" id="btn-robust" title="Smurf Robusto (50 berries)">
+                <div class="icon" style="background: #3498db;"></div>
+                <span class="label">Robusto (50)</span>
+            </div>
+            <div class="tower-btn" id="btn-genius" title="Smurf Gênio (75 berries)">
+                <div class="icon" style="background: #9b59b6;"></div>
+                <span class="label">Gênio (75)</span>
+            </div>
+            <div class="tower-btn" id="btn-ette" title="Smurfette (120 berries)">
+                <div class="icon" style="background: #f1c40f;"></div>
+                <span class="label">Smurfette (120)</span>
+            </div>
+        </div>
+        <div id="game-over" class="hidden">
+            <div class="modal">
+                <h2>Gargamel Venceu!</h2>
+                <button onclick="location.reload()">Tentar Novamente</button>
+            </div>
+        </div>
     </div>
-
     <script src="src/game.js"></script>
 </body>
 
