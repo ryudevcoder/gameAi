@@ -3,7 +3,7 @@ const config = {
     width: 800,
     height: 600,
     parent: 'game-container',
-    backgroundColor: '#0c0c0c', /* Dark asphalt */
+    backgroundColor: '#1a2e1a', /* Dark mountain green */
     physics: {
         default: 'arcade',
         arcade: {
@@ -129,14 +129,16 @@ function create() {
 }
 
 function update(time, delta) {
+    if (!car || !car.body) return; // Segurança caso o carro não tenha sido criado
+
     const isHandbrake = spaceKey.isDown;
     const isAccelerating = cursors.up.isDown || this.input.keyboard.addKey('W').isDown;
     const isBraking = cursors.down.isDown || this.input.keyboard.addKey('S').isDown;
     const turnLeft = cursors.left.isDown || this.input.keyboard.addKey('A').isDown;
     const turnRight = cursors.right.isDown || this.input.keyboard.addKey('D').isDown;
 
-    // Calculamos a velocidade para exibição antes de usar
-    const displaySpeed = Math.floor(Math.abs(car.speed));
+    // Definição da velocidade para uso global na função
+    const currentDisplaySpeed = Math.floor(Math.abs(car.speed || 0));
 
     // 1. Steering
     if (turnLeft) {
@@ -156,49 +158,40 @@ function update(time, delta) {
         car.speed *= 0.99; // Rolling friction
     }
 
-    // Handbrake: Slow down speed but keep momentum (lower driftFactor)
+    // Handbrake: momentum sliding
     let currentDriftFactor = car.driftFactor;
     if (isHandbrake) {
         car.speed *= 0.98;
-        currentDriftFactor = 0.7; // Harder sliding
+        currentDriftFactor = 0.7;
     }
 
-    // Clamp speed
     car.speed = Phaser.Math.Clamp(car.speed, -50, car.setMaxVelocity().maxVelocity.x);
 
-    // 3. Drift Physics (Slip Angle)
-    // We update the velocity gradually towards the heading direction
+    // 3. Drift Physics
     const headingX = Math.cos(car.rotation) * car.speed;
     const headingY = Math.sin(car.rotation) * car.speed;
 
-    // Lerp velocity toward heading (drift mechanic)
-    if (car.body) {
-        car.body.velocity.x = car.body.velocity.x * currentDriftFactor + headingX * (1 - currentDriftFactor);
-        car.body.velocity.y = car.body.velocity.y * currentDriftFactor + headingY * (1 - currentDriftFactor);
-    }
+    car.body.velocity.x = car.body.velocity.x * currentDriftFactor + headingX * (1 - currentDriftFactor);
+    car.body.velocity.y = car.body.velocity.y * currentDriftFactor + headingY * (1 - currentDriftFactor);
 
     // 5. Visual Effects (Smoke & Speed Lines)
-    let driftIntensity = 0;
-    if (car.body) {
-        driftIntensity = Math.abs(car.body.velocity.angle() - car.rotation);
-    }
-
+    const driftIntensity = Math.abs(car.body.velocity.angle() - car.rotation);
     if ((isHandbrake && car.speed > 50) || (driftIntensity > 0.2 && car.speed > 100)) {
         particles.emitParticleAt(car.x, car.y);
     }
 
-    // Speed Lines Alpha (Anime style)
-    if (displaySpeed > 200) {
+    // Speed Lines Alpha
+    if (currentDisplaySpeed > 200) {
         if (speedLines) {
-            speedLines.setAlpha((displaySpeed - 200) / 150);
-            speedLines.x = 400 + Math.random() * 5; // Shake effect
+            speedLines.setAlpha((currentDisplaySpeed - 200) / 150);
+            speedLines.x = 400 + Math.random() * 5;
         }
     } else if (speedLines) {
         speedLines.setAlpha(0);
     }
 
     // 6. UI Updates
-    if (speedometerText) speedometerText.innerText = `${displaySpeed} KM/H`;
+    if (speedometerText) speedometerText.innerText = `${currentDisplaySpeed} KM/H`;
 
     const elapsed = time - startTime;
     const minutes = Math.floor(elapsed / 60000).toString().padStart(2, '0');
