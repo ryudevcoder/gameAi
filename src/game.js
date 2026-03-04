@@ -32,11 +32,22 @@ let trails;
 let speedLines;
 
 function preload() {
-    // Carrega o sprite do carro gerado
+    // Tenta carregar o sprite do carro gerado
     this.load.image('car_sprite', 'assets/car.png');
 
     // Smoke particle placeholder (using graphics for efficiency)
     const graphics = this.add.graphics();
+
+    // Fallback: Se o car.png falhar, o Phaser usará a chave 'car_sprite'. 
+    // Criamos uma textura de fallback com o mesmo nome caso a imagem não carregue.
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillRect(0, 0, 40, 20);
+    graphics.fillStyle(0x000000, 1);
+    graphics.fillRect(0, 0, 40, 5);
+    graphics.fillRect(0, 15, 40, 5);
+    graphics.generateTexture('car_fallback', 40, 20);
+
+    graphics.clear();
     graphics.fillStyle(0xaaaaaa, 0.5);
     graphics.fillCircle(5, 5, 5);
     graphics.generateTexture('smoke', 10, 10);
@@ -73,9 +84,16 @@ function create() {
     // Speed Lines Effect
     speedLines = this.add.sprite(400, 300, 'speedline').setOrigin(0.5).setAlpha(0);
 
-    // Car setup using sprite
-    car = this.physics.add.sprite(150, 300, 'car_sprite');
-    car.setScale(0.15); // Scale down the generated sprite
+    // Car setup: Verifica se a imagem carregou, senão usa fallback
+    const carKey = this.textures.exists('car_sprite') ? 'car_sprite' : 'car_fallback';
+    car = this.physics.add.sprite(150, 300, carKey);
+
+    if (carKey === 'car_sprite') {
+        car.setScale(0.15);
+    } else {
+        car.setScale(1); // Fallback já está no tamanho certo
+    }
+
     car.setOrigin(0.5, 0.5);
     car.setDrag(100);
     car.setMaxVelocity(350);
@@ -117,6 +135,9 @@ function update(time, delta) {
     const turnLeft = cursors.left.isDown || this.input.keyboard.addKey('A').isDown;
     const turnRight = cursors.right.isDown || this.input.keyboard.addKey('D').isDown;
 
+    // Calculamos a velocidade para exibição antes de usar
+    const displaySpeed = Math.floor(Math.abs(car.speed));
+
     // 1. Steering
     if (turnLeft) {
         car.setAngularVelocity(-180);
@@ -151,29 +172,37 @@ function update(time, delta) {
     const headingY = Math.sin(car.rotation) * car.speed;
 
     // Lerp velocity toward heading (drift mechanic)
-    car.body.velocity.x = car.body.velocity.x * currentDriftFactor + headingX * (1 - currentDriftFactor);
-    car.body.velocity.y = car.body.velocity.y * currentDriftFactor + headingY * (1 - currentDriftFactor);
+    if (car.body) {
+        car.body.velocity.x = car.body.velocity.x * currentDriftFactor + headingX * (1 - currentDriftFactor);
+        car.body.velocity.y = car.body.velocity.y * currentDriftFactor + headingY * (1 - currentDriftFactor);
+    }
 
     // 5. Visual Effects (Smoke & Speed Lines)
-    const driftIntensity = Math.abs(car.body.velocity.angle() - car.rotation);
+    let driftIntensity = 0;
+    if (car.body) {
+        driftIntensity = Math.abs(car.body.velocity.angle() - car.rotation);
+    }
+
     if ((isHandbrake && car.speed > 50) || (driftIntensity > 0.2 && car.speed > 100)) {
         particles.emitParticleAt(car.x, car.y);
     }
 
     // Speed Lines Alpha (Anime style)
     if (displaySpeed > 200) {
-        speedLines.setAlpha((displaySpeed - 200) / 150);
-        speedLines.x = 400 + Math.random() * 5; // Shake effect
-    } else {
+        if (speedLines) {
+            speedLines.setAlpha((displaySpeed - 200) / 150);
+            speedLines.x = 400 + Math.random() * 5; // Shake effect
+        }
+    } else if (speedLines) {
         speedLines.setAlpha(0);
     }
 
     // 6. UI Updates
-    speedometerText.innerText = `${displaySpeed} KM/H`;
+    if (speedometerText) speedometerText.innerText = `${displaySpeed} KM/H`;
 
     const elapsed = time - startTime;
     const minutes = Math.floor(elapsed / 60000).toString().padStart(2, '0');
     const seconds = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
     const ms = Math.floor((elapsed % 1000) / 10).toString().padStart(2, '0');
-    timerText.innerText = `${minutes}:${seconds}.${ms}`;
+    if (timerText) timerText.innerText = `${minutes}:${seconds}.${ms}`;
 }
