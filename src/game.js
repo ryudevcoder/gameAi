@@ -352,6 +352,8 @@ function updateUpgradeUI() {
 
     document.getElementById('up-damage-lvl').innerText = t.damageLevel;
     document.getElementById('up-range-lvl').innerText = t.rangeLevel;
+    document.getElementById('up-damage-val').innerText = t.damage;
+    document.getElementById('up-range-val').innerText = Math.floor(t.range);
 
     const btnDamage = document.getElementById('btn-up-damage');
     const btnRange = document.getElementById('btn-up-range');
