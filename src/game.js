@@ -206,9 +206,19 @@ function spawnEnemy(scene) {
 }
 
 function selectTower(type) {
+    // Se clicar no mesmo Smurf, desseleciona
+    if (selectedTowerType === type) {
+        clearSelection();
+        return;
+    }
+
     selectedTowerType = type;
+    console.log("Selecionado:", type);
+
+    // UI Update
     document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(`btn-${type}`).classList.add('active');
+    const activeBtn = document.getElementById(`btn-${type}`);
+    if (activeBtn) activeBtn.classList.add('active');
 }
 
 function placeTower(scene, x, y) {
@@ -248,15 +258,21 @@ function placeTower(scene, x, y) {
 
     towers.add(tower);
 
-    // FORÇAR DESSELEÇÃO LIMPA
+    // Limpa imediatamente e reforça após um frame
     clearSelection();
+    setTimeout(clearSelection, 50);
 }
 
 function clearSelection() {
     selectedTowerType = null;
-    document.querySelectorAll('.tower-btn').forEach(btn => {
+
+    // Remove a classe de todos os botões de forma agressiva
+    const buttons = document.getElementsByClassName('tower-btn');
+    for (let btn of buttons) {
         btn.classList.remove('active');
-    });
+    }
+
+    console.log("Seleção limpa com sucesso.");
 }
 
 function shoot(scene, tower, target) {
