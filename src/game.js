@@ -42,11 +42,15 @@ function preload() {
 }
 
 function create() {
-    // Define Path (Z-shape)
-    path = new Phaser.Curves.Path(0, 150);
-    path.lineTo(700, 150);
-    path.lineTo(700, 450);
-    path.lineTo(0, 450);
+    // Define Path (S-shape/Snake)
+    path = new Phaser.Curves.Path(0, 100);
+    path.lineTo(750, 100);
+    path.lineTo(750, 250);
+    path.lineTo(150, 250);
+    path.lineTo(150, 400);
+    path.lineTo(750, 400);
+    path.lineTo(750, 550);
+    path.lineTo(0, 550);
 
     // Draw Path
     graphics = this.add.graphics();
@@ -140,7 +144,7 @@ function update(time, delta) {
 
     // Enemy movement (Normalized with delta)
     enemies.getChildren().forEach(enemy => {
-        const baseSpeed = 0.00003;
+        const baseSpeed = 0.00002; // Reduced slightly as path is longer
         enemy.t += (baseSpeed * delta * enemy.speed * enemy.speedModifier);
 
         const pos = path.getPoint(enemy.t);
@@ -152,6 +156,15 @@ function update(time, delta) {
             enemy.destroy();
             updateUI();
             if (lives <= 0) gameOver();
+        }
+    });
+
+    // Update bullets to home in on targets
+    bullets.getChildren().forEach(bullet => {
+        if (bullet.target && bullet.target.active) {
+            this.physics.moveToObject(bullet, bullet.target, bullet.speed);
+        } else {
+            bullet.destroy();
         }
     });
 
@@ -173,13 +186,22 @@ function update(time, delta) {
 }
 
 function isPointOnPath(x, y) {
-    const pathWidth = 50; // Um pouco maior que a linha do caminho (40)
-    // Segmento 1: Horizontal (0, 150) -> (700, 150)
-    if (x >= 0 && x <= 720 && Math.abs(y - 150) < pathWidth) return true;
-    // Segmento 2: Vertical (700, 150) -> (700, 450)
-    if (Math.abs(x - 700) < pathWidth && y >= 130 && y <= 470) return true;
-    // Segmento 3: Horizontal (700, 450) -> (0, 450)
-    if (x >= 0 && x <= 720 && Math.abs(y - 450) < pathWidth) return true;
+    const pathWidth = 50;
+    // Segment 1: H (0, 100) -> (750, 100)
+    if (x >= 0 && x <= 770 && Math.abs(y - 100) < pathWidth) return true;
+    // Segment 2: V (750, 100) -> (750, 250)
+    if (Math.abs(x - 750) < pathWidth && y >= 80 && y <= 270) return true;
+    // Segment 3: H (750, 250) -> (150, 250)
+    if (x >= 130 && x <= 770 && Math.abs(y - 250) < pathWidth) return true;
+    // Segment 4: V (150, 250) -> (150, 400)
+    if (Math.abs(x - 150) < pathWidth && y >= 230 && y <= 420) return true;
+    // Segment 5: H (150, 400) -> (750, 400)
+    if (x >= 130 && x <= 770 && Math.abs(y - 400) < pathWidth) return true;
+    // Segment 6: V (750, 400) -> (750, 550)
+    if (Math.abs(x - 750) < pathWidth && y >= 380 && y <= 570) return true;
+    // Segment 7: H (750, 550) -> (0, 550)
+    if (x >= 0 && x <= 770 && Math.abs(y - 550) < pathWidth) return true;
+
     return false;
 }
 
@@ -279,16 +301,18 @@ function clearSelection() {
 function shoot(scene, tower, target) {
     const bullet = scene.add.circle(tower.x, tower.y, 5, 0xffffff);
     scene.physics.add.existing(bullet);
-    bullets.add(bullet); // Add to group before setting velocity
+    bullets.add(bullet);
 
     bullet.body.setAllowGravity(false);
-    scene.physics.moveToObject(bullet, target, tower.bulletSpeed);
-
+    bullet.target = target;
+    bullet.speed = tower.bulletSpeed;
     bullet.damage = tower.damage;
     bullet.slow = tower.slow;
 
-    // Auto-destroy bullet after 2 seconds
-    scene.time.delayedCall(2000, () => { if (bullet.active) bullet.destroy(); });
+    // The movement is now handled in the update loop to ensure it always hits
+
+    // Auto-destroy bullet after 4 seconds as a fallback
+    scene.time.delayedCall(4000, () => { if (bullet.active) bullet.destroy(); });
 }
 
 function getClosestEnemy(tower) {
