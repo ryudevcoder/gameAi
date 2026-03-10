@@ -340,7 +340,10 @@ function deselectTowerInstance() {
 }
 
 function updateUpgradeUI() {
-    if (!selectedTowerInstance) return;
+    if (!selectedTowerInstance) {
+        document.getElementById('upgrade-panel').classList.add('hidden');
+        return;
+    }
 
     const t = selectedTowerInstance;
     const data = TOWER_DATA[t.type];
@@ -413,15 +416,17 @@ function upgradeTowerStat(tower, stat) {
 }
 
 function sellTower(tower) {
+    // 1. Limpa seleção e esconde o painel IMEDIATAMENTE
+    deselectTowerInstance();
+
+    // 2. Processa o reembolso
     const data = TOWER_DATA[tower.type];
-    const refund = Math.floor(data.cost * 0.7); // 70% de volta
+    const refund = Math.floor(data.cost * 0.7);
     updateCurrency(refund);
 
-    tower.container.destroy();
+    // 3. Destrói os objetos do jogo
+    if (tower.container) tower.container.destroy();
     towers.remove(tower);
-
-    // Garante que o painel suma e a referência seja limpa
-    deselectTowerInstance();
 }
 
 function clearSelection() {
