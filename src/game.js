@@ -366,6 +366,9 @@ function updateUpgradeUI() {
     if (uiDamageCost) uiDamageCost.innerText = damageCost;
     if (uiRangeCost) uiRangeCost.innerText = rangeCost;
 
+    const refund = Math.floor(data.cost * 0.7);
+    document.getElementById('sell-refund').innerText = refund;
+
     const btnDamage = document.getElementById('btn-up-damage');
     const btnRange = document.getElementById('btn-up-range');
 
@@ -416,6 +419,8 @@ function sellTower(tower) {
 
     tower.container.destroy();
     towers.remove(tower);
+
+    // Garante que o painel suma e a referência seja limpa
     deselectTowerInstance();
 }
 
