@@ -65,17 +65,18 @@ function create() {
     this.input.on('pointerdown', (pointer) => {
         // Se clicar no mapa (gramado) e tiver algo selecionado
         if (selectedTowerType) {
-            if (currency >= TOWER_DATA[selectedTowerType].cost) {
+            const cost = TOWER_DATA[selectedTowerType].cost;
+            if (currency >= cost) {
                 if (!isPointOnPath(pointer.x, pointer.y)) {
                     placeTower(this, pointer.x, pointer.y);
                 } else {
-                    // Feedback visual se clicar no caminho
                     this.cameras.main.shake(100, 0.005);
                 }
             }
         } else {
-            // Se clicar no gramado sem nada selecionado, esconde todos os ranges abertos
-            towers.getChildren().forEach(t => t.rangeCircle.visible = false);
+            towers.getChildren().forEach(t => {
+                if (t.rangeCircle) t.rangeCircle.visible = false;
+            });
         }
     });
 
@@ -258,21 +259,21 @@ function placeTower(scene, x, y) {
 
     towers.add(tower);
 
-    // Limpa imediatamente e reforça após um frame
+    // LIMPEZA ABSOLUTA
     clearSelection();
-    setTimeout(clearSelection, 50);
 }
 
 function clearSelection() {
+    console.log("Limpando seleção...");
     selectedTowerType = null;
 
-    // Remove a classe de todos os botões de forma agressiva
-    const buttons = document.getElementsByClassName('tower-btn');
-    for (let btn of buttons) {
+    // Remove a classe 'active' de TODOS os botões
+    const buttons = document.querySelectorAll('.tower-btn');
+    buttons.forEach(btn => {
         btn.classList.remove('active');
-    }
-
-    console.log("Seleção limpa com sucesso.");
+        btn.style.borderColor = "#7f8c8d"; // Cor padrão do CSS
+        btn.style.boxShadow = "none";
+    });
 }
 
 function shoot(scene, tower, target) {
