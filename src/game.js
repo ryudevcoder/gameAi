@@ -355,22 +355,35 @@ function updateUpgradeUI() {
     document.getElementById('up-damage-val').innerText = t.damage;
     document.getElementById('up-range-val').innerText = Math.floor(t.range);
 
+    const nextDamage = t.baseDamage * (1 + t.damageLevel * 0.5);
+    const nextRange = t.baseRange * (1 + t.rangeLevel * 0.3);
+
+    document.getElementById('up-damage-next').innerText = nextDamage;
+    document.getElementById('up-range-next').innerText = Math.floor(nextRange);
+
+    const uiDamageCost = document.getElementById('up-damage-cost');
+    const uiRangeCost = document.getElementById('up-range-cost');
+    if (uiDamageCost) uiDamageCost.innerText = damageCost;
+    if (uiRangeCost) uiRangeCost.innerText = rangeCost;
+
     const btnDamage = document.getElementById('btn-up-damage');
     const btnRange = document.getElementById('btn-up-range');
 
     if (t.damageLevel >= 3) {
-        btnDamage.innerText = "MAX";
+        btnDamage.innerText = "NÍVEL MÁX";
         btnDamage.disabled = true;
+        document.getElementById('up-damage-next').innerText = "MAX";
     } else {
-        btnDamage.innerText = `Upgrade (${damageCost} 🍒)`;
+        btnDamage.innerText = `Melhorar (${damageCost} 🍒)`;
         btnDamage.disabled = currency < damageCost;
     }
 
     if (t.rangeLevel >= 3) {
-        btnRange.innerText = "MAX";
+        btnRange.innerText = "NÍVEL MÁX";
         btnRange.disabled = true;
+        document.getElementById('up-range-next').innerText = "MAX";
     } else {
-        btnRange.innerText = `Upgrade (${rangeCost} 🍒)`;
+        btnRange.innerText = `Melhorar (${rangeCost} 🍒)`;
         btnRange.disabled = currency < rangeCost;
     }
 }
