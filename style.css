@@ -183,8 +183,21 @@ body {
 .upgrade-item {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 3px;
     font-size: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.stat-detail {
+    font-size: 12px;
+    color: #bdc3c7;
+    margin-bottom: 5px;
+}
+
+.stat-detail b {
+    color: white;
 }
 
 .upgrade-item button {
