@@ -58,20 +58,23 @@ function create() {
     bullets = this.physics.add.group();
 
     // UI Buttons
-    document.getElementById('btn-robust').onclick = () => selectTower('robust');
-    document.getElementById('btn-genius').onclick = () => selectTower('genius');
-    document.getElementById('btn-ette').onclick = () => selectTower('ette');
+    document.getElementById('btn-robust').onclick = (e) => { e.stopPropagation(); selectTower('robust'); };
+    document.getElementById('btn-genius').onclick = (e) => { e.stopPropagation(); selectTower('genius'); };
+    document.getElementById('btn-ette').onclick = (e) => { e.stopPropagation(); selectTower('ette'); };
 
     this.input.on('pointerdown', (pointer) => {
-        if (selectedTowerType && currency >= TOWER_DATA[selectedTowerType].cost) {
-            if (!isPointOnPath(pointer.x, pointer.y)) {
-                placeTower(this, pointer.x, pointer.y);
-            } else {
-                // Feedback visual ou sonoro de erro (opcional)
-                console.log("Não pode colocar no caminho!");
+        // Se clicar no mapa (gramado) e tiver algo selecionado
+        if (selectedTowerType) {
+            if (currency >= TOWER_DATA[selectedTowerType].cost) {
+                if (!isPointOnPath(pointer.x, pointer.y)) {
+                    placeTower(this, pointer.x, pointer.y);
+                } else {
+                    // Feedback visual se clicar no caminho
+                    this.cameras.main.shake(100, 0.005);
+                }
             }
-        } else if (!selectedTowerType) {
-            // Se clicar no mapa sem torre selecionada, esconde todos os raios
+        } else {
+            // Se clicar no gramado sem nada selecionado, esconde todos os ranges abertos
             towers.getChildren().forEach(t => t.rangeCircle.visible = false);
         }
     });
@@ -245,9 +248,15 @@ function placeTower(scene, x, y) {
 
     towers.add(tower);
 
-    // DESSELEÇÃO CORRETA
+    // FORÇAR DESSELEÇÃO LIMPA
+    clearSelection();
+}
+
+function clearSelection() {
     selectedTowerType = null;
-    document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tower-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
 }
 
 function shoot(scene, tower, target) {
