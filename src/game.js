@@ -30,6 +30,7 @@ let waveActive = false;
 let nextEnemyTime = 0;
 let enemiesRemainingInWave = 0;
 let previewTower;
+let selectedTowerInstance = null;
 
 const TOWER_DATA = {
     robust: { cost: 50, color: 0x3498db, range: 150, fireRate: 800, damage: 10, bulletSpeed: 400 },
@@ -66,6 +67,20 @@ function create() {
     document.getElementById('btn-genius').onclick = (e) => { e.stopPropagation(); selectTower('genius'); };
     document.getElementById('btn-ette').onclick = (e) => { e.stopPropagation(); selectTower('ette'); };
 
+    // Upgrade buttons
+    document.getElementById('btn-up-damage').onclick = (e) => {
+        e.stopPropagation();
+        if (selectedTowerInstance) upgradeTowerStat(selectedTowerInstance, 'damage');
+    };
+    document.getElementById('btn-up-range').onclick = (e) => {
+        e.stopPropagation();
+        if (selectedTowerInstance) upgradeTowerStat(selectedTowerInstance, 'range');
+    };
+    document.getElementById('btn-sell').onclick = (e) => {
+        e.stopPropagation();
+        if (selectedTowerInstance) sellTower(selectedTowerInstance);
+    };
+
     this.input.on('pointerdown', (pointer) => {
         // Se clicar no mapa (gramado) e tiver algo selecionado
         if (selectedTowerType) {
@@ -78,6 +93,8 @@ function create() {
                 }
             }
         } else {
+            // Descelecionar torre se clicar no chão
+            deselectTowerInstance();
             towers.getChildren().forEach(t => {
                 if (t.rangeCircle) t.rangeCircle.visible = false;
             });
@@ -259,24 +276,28 @@ function placeTower(scene, x, y) {
     towerContainer.setInteractive();
     towerContainer.rangeCircle = rangeCircle;
 
-    // Mostrar range ao clicar na torre
+    // Mostrar range e selecionar ao clicar na torre
     towerContainer.on('pointerdown', (pointer, localX, localY, event) => {
-        event.stopPropagation(); // Evita que o mapa esconda o range imediatamente
-        towers.getChildren().forEach(t => t.rangeCircle.visible = false); // Fecha outros
-        rangeCircle.visible = !rangeCircle.visible;
+        event.stopPropagation();
+        selectTowerInstance(tower);
     });
 
     const tower = {
         x: x,
         y: y,
+        container: towerContainer,
         type: selectedTowerType,
         range: data.range,
+        baseRange: data.range,
         damage: data.damage,
+        baseDamage: data.damage,
         fireRate: data.fireRate,
         slow: data.slow || null,
         bulletSpeed: data.bulletSpeed,
         nextShot: 0,
-        rangeCircle: rangeCircle // Referência para manipular depois
+        rangeCircle: rangeCircle,
+        damageLevel: 1,
+        rangeLevel: 1
     };
 
     towers.add(tower);
@@ -285,16 +306,104 @@ function placeTower(scene, x, y) {
     clearSelection();
 }
 
+function selectTowerInstance(tower) {
+    deselectTowerInstance();
+    selectedTowerInstance = tower;
+
+    // Mostrar range da torre selecionada
+    towers.getChildren().forEach(t => t.rangeCircle.visible = false);
+    tower.rangeCircle.visible = true;
+    tower.rangeCircle.setStrokeStyle(2, 0xffff00, 1);
+
+    // Mostrar painel de upgrade
+    const panel = document.getElementById('upgrade-panel');
+    panel.classList.remove('hidden');
+
+    updateUpgradeUI();
+}
+
+function deselectTowerInstance() {
+    selectedTowerInstance = null;
+    document.getElementById('upgrade-panel').classList.add('hidden');
+    towers.getChildren().forEach(t => {
+        t.rangeCircle.visible = false;
+        t.rangeCircle.setStrokeStyle(1, 0xffffff, 0.5);
+    });
+}
+
+function updateUpgradeUI() {
+    if (!selectedTowerInstance) return;
+
+    const t = selectedTowerInstance;
+    const data = TOWER_DATA[t.type];
+
+    document.getElementById('upgrade-title').innerText = "Smurf " + t.type.charAt(0).toUpperCase() + t.type.slice(1);
+
+    const damageCost = Math.floor(data.cost * 0.6 * t.damageLevel);
+    const rangeCost = Math.floor(data.cost * 0.5 * t.rangeLevel);
+
+    document.getElementById('up-damage-lvl').innerText = t.damageLevel;
+    document.getElementById('up-range-lvl').innerText = t.rangeLevel;
+
+    const btnDamage = document.getElementById('btn-up-damage');
+    const btnRange = document.getElementById('btn-up-range');
+
+    if (t.damageLevel >= 3) {
+        btnDamage.innerText = "MAX";
+        btnDamage.disabled = true;
+    } else {
+        btnDamage.innerText = `Upgrade (${damageCost} 🍒)`;
+        btnDamage.disabled = currency < damageCost;
+    }
+
+    if (t.rangeLevel >= 3) {
+        btnRange.innerText = "MAX";
+        btnRange.disabled = true;
+    } else {
+        btnRange.innerText = `Upgrade (${rangeCost} 🍒)`;
+        btnRange.disabled = currency < rangeCost;
+    }
+}
+
+function upgradeTowerStat(tower, stat) {
+    const data = TOWER_DATA[tower.type];
+    if (stat === 'damage' && tower.damageLevel < 3) {
+        const cost = Math.floor(data.cost * 0.6 * tower.damageLevel);
+        if (currency >= cost) {
+            updateCurrency(-cost);
+            tower.damageLevel++;
+            tower.damage = tower.baseDamage * (1 + (tower.damageLevel - 1) * 0.5); // +50% por nível
+        }
+    } else if (stat === 'range' && tower.rangeLevel < 3) {
+        const cost = Math.floor(data.cost * 0.5 * tower.rangeLevel);
+        if (currency >= cost) {
+            updateCurrency(-cost);
+            tower.rangeLevel++;
+            tower.range = tower.baseRange * (1 + (tower.rangeLevel - 1) * 0.3); // +30% por nível
+            tower.rangeCircle.setRadius(tower.range);
+        }
+    }
+    updateUpgradeUI();
+}
+
+function sellTower(tower) {
+    const data = TOWER_DATA[tower.type];
+    const refund = Math.floor(data.cost * 0.7); // 70% de volta
+    updateCurrency(refund);
+
+    tower.container.destroy();
+    towers.remove(tower);
+    deselectTowerInstance();
+}
+
 function clearSelection() {
     console.log("Limpando seleção...");
     selectedTowerType = null;
 
-    // Remove a classe 'active' de TODOS os botões
+    // UI Update
     const buttons = document.querySelectorAll('.tower-btn');
     buttons.forEach(btn => {
         btn.classList.remove('active');
-        btn.style.borderColor = "#7f8c8d"; // Cor padrão do CSS
-        btn.style.boxShadow = "none";
     });
 }
 
@@ -338,6 +447,7 @@ function updateUI() {
     document.getElementById('currency').innerText = currency;
     document.getElementById('lives').innerText = lives;
     document.getElementById('wave').innerText = wave;
+    updateUpgradeUI(); // Update upgrade buttons status (enabled/disabled)
 }
 
 function gameOver() {

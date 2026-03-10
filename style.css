@@ -143,3 +143,86 @@ body {
 .modal button:hover {
     background: #e67e22;
 }
+
+#upgrade-panel {
+    position: fixed;
+    bottom: 120px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 3px solid #3498db;
+    border-radius: 15px;
+    padding: 15px;
+    width: 220px;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    z-index: 50;
+}
+
+#upgrade-panel.hidden {
+    display: none;
+}
+
+#upgrade-panel h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #3498db;
+    text-align: center;
+    border-bottom: 1px solid #3498db;
+    padding-bottom: 5px;
+}
+
+.upgrade-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.upgrade-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 14px;
+}
+
+.upgrade-item button {
+    background: #27ae60;
+    border: none;
+    color: white;
+    padding: 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.upgrade-item button:hover {
+    background: #2ecc71;
+    transform: scale(1.05);
+}
+
+.upgrade-item button:disabled {
+    background: #7f8c8d;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.sell-btn {
+    background: #e74c3c;
+    border: none;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    margin-top: 5px;
+    transition: background 0.2s;
+}
+
+.sell-btn:hover {
+    background: #c0392b;
+}
