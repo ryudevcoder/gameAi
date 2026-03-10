@@ -29,6 +29,7 @@ let selectedTowerType = null;
 let waveActive = false;
 let nextEnemyTime = 0;
 let enemiesRemainingInWave = 0;
+let previewTower;
 
 const TOWER_DATA = {
     robust: { cost: 50, color: 0x3498db, range: 150, fireRate: 800, damage: 10, bulletSpeed: 400 },
@@ -63,9 +64,26 @@ function create() {
 
     this.input.on('pointerdown', (pointer) => {
         if (selectedTowerType && currency >= TOWER_DATA[selectedTowerType].cost) {
-            placeTower(this, pointer.x, pointer.y);
+            if (!isPointOnPath(pointer.x, pointer.y)) {
+                placeTower(this, pointer.x, pointer.y);
+            } else {
+                // Feedback visual ou sonoro de erro (opcional)
+                console.log("Não pode colocar no caminho!");
+            }
+        } else if (!selectedTowerType) {
+            // Se clicar no mapa sem torre selecionada, esconde todos os raios
+            towers.getChildren().forEach(t => t.rangeCircle.visible = false);
         }
     });
+
+    // Preview tower initialization
+    previewTower = this.add.container(0, 0).setVisible(false).setDepth(100);
+    const previewCircle = this.add.circle(0, 0, 20, 0xffffff, 0.5);
+    const previewRange = this.add.circle(0, 0, 0, 0xffffff, 0.2);
+    previewRange.setStrokeStyle(1, 0xffffff, 0.8);
+    previewTower.add([previewRange, previewCircle]);
+    previewTower.rangeCircle = previewRange;
+    previewTower.mainCircle = previewCircle;
 
     // Start Wave Timer or trigger manually
     this.time.addEvent({
@@ -116,22 +134,32 @@ function update(time, delta) {
         }
     });
 
-    // Enemy movement (Normalized with delta)
-    enemies.getChildren().forEach(enemy => {
-        const baseSpeed = 0.00003; 
-        enemy.t += (baseSpeed * delta * enemy.speed * enemy.speedModifier);
-        
-        const pos = path.getPoint(enemy.t);
-        if (pos) {
-            enemy.setPosition(pos.x, pos.y);
+    // Update preview tower position
+    if (selectedTowerType) {
+        previewTower.setVisible(true);
+        previewTower.setPosition(this.input.x, this.input.y);
+        const data = TOWER_DATA[selectedTowerType];
+        previewTower.rangeCircle.setRadius(data.range);
+        previewTower.mainCircle.setFillStyle(data.color, 0.5);
+
+        // Feedback se está no caminho
+        if (isPointOnPath(this.input.x, this.input.y)) {
+            previewTower.mainCircle.setFillStyle(0xff0000, 0.5);
         }
-        if (enemy.t >= 1) {
-            lives--;
-            enemy.destroy();
-            updateUI();
-            if (lives <= 0) gameOver();
-        }
-    });
+    } else {
+        previewTower.setVisible(false);
+    }
+}
+
+function isPointOnPath(x, y) {
+    const pathWidth = 50; // Um pouco maior que a linha do caminho (40)
+    // Segmento 1: Horizontal (0, 150) -> (700, 150)
+    if (x >= 0 && x <= 720 && Math.abs(y - 150) < pathWidth) return true;
+    // Segmento 2: Vertical (700, 150) -> (700, 450)
+    if (Math.abs(x - 700) < pathWidth && y >= 130 && y <= 470) return true;
+    // Segmento 3: Horizontal (700, 450) -> (0, 450)
+    if (x >= 0 && x <= 720 && Math.abs(y - 450) < pathWidth) return true;
+    return false;
 }
 
 function startNewWave() {
@@ -171,8 +199,19 @@ function placeTower(scene, x, y) {
     const base = scene.add.circle(0, 0, 20, data.color);
     const rangeCircle = scene.add.circle(0, 0, data.range, 0xffffff, 0.1);
     rangeCircle.setStrokeStyle(1, 0xffffff, 0.5);
+    rangeCircle.visible = false; // Escondido por padrão
 
     towerContainer.add([rangeCircle, base]);
+    towerContainer.setSize(40, 40);
+    towerContainer.setInteractive();
+    towerContainer.rangeCircle = rangeCircle;
+
+    // Mostrar range ao clicar na torre
+    towerContainer.on('pointerdown', (pointer, localX, localY, event) => {
+        event.stopPropagation(); // Evita que o mapa esconda o range imediatamente
+        towers.getChildren().forEach(t => t.rangeCircle.visible = false); // Fecha outros
+        rangeCircle.visible = !rangeCircle.visible;
+    });
 
     const tower = {
         x: x,
@@ -183,10 +222,13 @@ function placeTower(scene, x, y) {
         fireRate: data.fireRate,
         slow: data.slow || null,
         bulletSpeed: data.bulletSpeed,
-        nextShot: 0
+        nextShot: 0,
+        rangeCircle: rangeCircle // Referência para manipular depois
     };
 
     towers.add(tower);
+
+    // DESSELEÇÃO CORRETA
     selectedTowerType = null;
     document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('active'));
 }
@@ -198,7 +240,7 @@ function shoot(scene, tower, target) {
 
     bullet.body.setAllowGravity(false);
     scene.physics.moveToObject(bullet, target, tower.bulletSpeed);
-    
+
     bullet.damage = tower.damage;
     bullet.slow = tower.slow;
 
