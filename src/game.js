@@ -134,6 +134,23 @@ function update(time, delta) {
         }
     });
 
+    // Enemy movement (Normalized with delta)
+    enemies.getChildren().forEach(enemy => {
+        const baseSpeed = 0.00003;
+        enemy.t += (baseSpeed * delta * enemy.speed * enemy.speedModifier);
+
+        const pos = path.getPoint(enemy.t);
+        if (pos) {
+            enemy.setPosition(pos.x, pos.y);
+        }
+        if (enemy.t >= 1) {
+            lives--;
+            enemy.destroy();
+            updateUI();
+            if (lives <= 0) gameOver();
+        }
+    });
+
     // Update preview tower position
     if (selectedTowerType) {
         previewTower.setVisible(true);
