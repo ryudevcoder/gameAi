@@ -81,8 +81,11 @@ function create() {
         if (selectedTowerInstance) sellTower(selectedTowerInstance);
     };
 
-    this.input.on('pointerdown', (pointer) => {
-        // Se clicar no mapa (gramado) e tiver algo selecionado
+    this.input.on('pointerdown', (pointer, currentlyOver) => {
+        // Se clicar em um Smurf já posicionado, não faz nada aqui (o listener da torre cuida disso)
+        if (currentlyOver.length > 0) return;
+
+        // Se clicar no mapa (gramado) e tiver algo selecionado para construir
         if (selectedTowerType) {
             const cost = TOWER_DATA[selectedTowerType].cost;
             if (currency >= cost) {
@@ -93,11 +96,8 @@ function create() {
                 }
             }
         } else {
-            // Descelecionar torre se clicar no chão
+            // Descelecionar torre se clicar no chão vazio
             deselectTowerInstance();
-            towers.getChildren().forEach(t => {
-                if (t.rangeCircle) t.rangeCircle.visible = false;
-            });
         }
     });
 
@@ -276,12 +276,6 @@ function placeTower(scene, x, y) {
     towerContainer.setInteractive();
     towerContainer.rangeCircle = rangeCircle;
 
-    // Mostrar range e selecionar ao clicar na torre
-    towerContainer.on('pointerdown', (pointer, localX, localY, event) => {
-        event.stopPropagation();
-        selectTowerInstance(tower);
-    });
-
     const tower = {
         x: x,
         y: y,
@@ -299,6 +293,20 @@ function placeTower(scene, x, y) {
         damageLevel: 1,
         rangeLevel: 1
     };
+
+    // Mostrar range e selecionar ao clicar na torre
+    towerContainer.on('pointerdown', (pointer, localX, localY, event) => {
+        if (event) event.stopPropagation();
+        selectTowerInstance(tower);
+    });
+
+    // Mudar cursor ao passar o mouse
+    towerContainer.on('pointerover', () => {
+        scene.input.setDefaultCursor('pointer');
+    });
+    towerContainer.on('pointerout', () => {
+        scene.input.setDefaultCursor('default');
+    });
 
     towers.add(tower);
 
