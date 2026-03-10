@@ -93,7 +93,7 @@ function create() {
     updateUI();
 }
 
-function update(time) {
+function update(time, delta) {
     if (waveActive && enemiesRemainingInWave > 0 && time > nextEnemyTime) {
         spawnEnemy(this);
         enemiesRemainingInWave--;
@@ -116,9 +116,11 @@ function update(time) {
         }
     });
 
-    // Enemy movement
+    // Enemy movement (Normalized with delta)
     enemies.getChildren().forEach(enemy => {
-        enemy.t += (0.0005 * enemy.speed * enemy.speedModifier);
+        const baseSpeed = 0.00003; 
+        enemy.t += (baseSpeed * delta * enemy.speed * enemy.speedModifier);
+        
         const pos = path.getPoint(enemy.t);
         if (pos) {
             enemy.setPosition(pos.x, pos.y);
@@ -150,7 +152,7 @@ function spawnEnemy(scene) {
 
     enemy.health = health;
     enemy.t = 0;
-    enemy.speed = isGato ? 2.5 : 1.0;
+    enemy.speed = isGato ? 1.5 : 0.6; // Reduced speed values
     enemy.speedModifier = 1;
     enemies.add(enemy);
 }
@@ -192,14 +194,16 @@ function placeTower(scene, x, y) {
 function shoot(scene, tower, target) {
     const bullet = scene.add.circle(tower.x, tower.y, 5, 0xffffff);
     scene.physics.add.existing(bullet);
+    bullets.add(bullet); // Add to group before setting velocity
 
+    bullet.body.setAllowGravity(false);
     scene.physics.moveToObject(bullet, target, tower.bulletSpeed);
+    
     bullet.damage = tower.damage;
     bullet.slow = tower.slow;
-    bullets.add(bullet);
 
-    // Auto-destroy bullet after range
-    scene.time.delayedCall(1000, () => { if (bullet.active) bullet.destroy(); });
+    // Auto-destroy bullet after 2 seconds
+    scene.time.delayedCall(2000, () => { if (bullet.active) bullet.destroy(); });
 }
 
 function getClosestEnemy(tower) {
