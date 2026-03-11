@@ -55,7 +55,7 @@ function create() {
 
     // Draw Path
     graphics = this.add.graphics();
-    graphics.lineStyle(40, 0x8b4513, 0.5);
+    graphics.lineStyle(40, 0x808080, 1.0);
     path.draw(graphics);
 
     enemies = this.physics.add.group();
