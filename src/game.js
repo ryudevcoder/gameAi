@@ -53,9 +53,62 @@ function create() {
     path.lineTo(750, 550);
     path.lineTo(0, 550);
 
-    // Draw Path
+    // Procedural Textures
+    const grassG = this.make.graphics({ x: 0, y: 0, add: false });
+    grassG.fillStyle(0x3d994d, 1);
+    grassG.fillRect(0, 0, 64, 64);
+    for (let i = 0; i < 40; i++) {
+        grassG.fillStyle(0x45a856, 0.5);
+        grassG.fillCircle(Phaser.Math.Between(0, 64), Phaser.Math.Between(0, 64), 2);
+        grassG.fillStyle(0x348241, 0.3);
+        grassG.fillRect(Phaser.Math.Between(0, 64), Phaser.Math.Between(0, 64), 2, 4);
+    }
+    grassG.generateTexture('grass', 64, 64);
+
+    const stoneG = this.make.graphics({ x: 0, y: 0, add: false });
+    stoneG.fillStyle(0x808080, 1);
+    stoneG.fillRect(0, 0, 64, 64);
+    for (let i = 0; i < 30; i++) {
+        stoneG.fillStyle(0x707070, 0.6);
+        stoneG.fillRect(Phaser.Math.Between(0, 64), Phaser.Math.Between(0, 64), 8, 8);
+        stoneG.fillStyle(0x909090, 0.4);
+        stoneG.fillRect(Phaser.Math.Between(0, 64), Phaser.Math.Between(0, 64), 4, 12);
+    }
+    stoneG.generateTexture('pathTexture', 64, 64);
+
+    // Draw Background
+    this.add.tileSprite(450, 300, 900, 600, 'grass');
+
+    // Add some random flowers for "WOW" factor
+    for (let i = 0; i < 50; i++) {
+        const fx = Phaser.Math.Between(0, 900);
+        const fy = Phaser.Math.Between(0, 600);
+        if (!isPointOnPath(fx, fy)) {
+            const colors = [0xffffff, 0xffff00, 0xff00ff, 0x3498db];
+            this.add.circle(fx, fy, 2, colors[Phaser.Math.Between(0, 3)], 0.8);
+        }
+    }
+
+    // Draw Path with texture
+    // Segment logic to draw textured rectangles
+    const segments = [
+        { x: 0, y: 100, w: 750, h: 40, originX: 0, originY: 0.5 },    // H1
+        { x: 750, y: 100, w: 40, h: 150, originX: 0.5, originY: 0 },  // V1
+        { x: 750, y: 250, w: 600, h: 40, originX: 1, originY: 0.5 },  // H2 (750 to 150)
+        { x: 150, y: 250, w: 40, h: 150, originX: 0.5, originY: 0 },  // V2
+        { x: 150, y: 400, w: 600, h: 40, originX: 0, originY: 0.5 },  // H3
+        { x: 750, y: 400, w: 40, h: 150, originX: 0.5, originY: 0 },  // V3
+        { x: 750, y: 550, w: 750, h: 40, originX: 1, originY: 0.5 }   // H4
+    ];
+
+    segments.forEach(seg => {
+        const ts = this.add.tileSprite(seg.x, seg.y, seg.w, seg.h, 'pathTexture');
+        ts.setOrigin(seg.originX, seg.originY);
+    });
+
+    // Invisible path for logic (kept for movement)
     graphics = this.add.graphics();
-    graphics.lineStyle(40, 0x808080, 1.0);
+    graphics.setVisible(false);
     path.draw(graphics);
 
     enemies = this.physics.add.group();
@@ -348,7 +401,8 @@ function updateUpgradeUI() {
     const t = selectedTowerInstance;
     const data = TOWER_DATA[t.type];
 
-    document.getElementById('upgrade-title').innerText = "Smurf " + t.type.charAt(0).toUpperCase() + t.type.slice(1);
+    const name = t.type === 'ette' ? 'Smurfette' : t.type.charAt(0).toUpperCase() + t.type.slice(1);
+    document.getElementById('upgrade-title').innerText = name;
 
     const damageCost = Math.floor(data.cost * 0.6 * t.damageLevel);
     const rangeCost = Math.floor(data.cost * 0.5 * t.rangeLevel);
